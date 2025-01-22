@@ -6,14 +6,45 @@ class Bubble:
         self.x = x
         self.y = y
         self.item_type = item_type
-        self.image = pygame.image.load(f'assets/images/{item_type}.png')
-        self.image = pygame.transform.scale(self.image, (50, 50))  # Resize to 50x50 pixels
-        self.speed = random.uniform(1, 3)
-        self.direction = random.choice([-1, 1])  # Diagonal direction
+        self.image = pygame.image.load(f'Assets/Images/{item_type}.png').convert_alpha()
+        self.image = pygame.transform.scale(self.image, (60, 60))  # Resize to 60x60 pixels
+        self.speed = random.uniform(1, 2)
+        self.direction = random.choice([-1, 1])  # Horizontal direction
+        self.popped = False
+        self.current_frame = 0
+        self.sliced = False
+        self.velocity_y = random.uniform(-10, -15)  # Initial upward velocity
+        self.gravity = 0.5  # Gravity effect
 
     def update(self):
-        self.y -= self.speed  # Move bubble up
-        self.x += self.direction * self.speed / 2  # Move bubble diagonally
+        if not self.popped and not self.sliced:
+            self.x += self.direction * self.speed  # Move bubble horizontally
+            self.y += self.velocity_y  # Apply vertical velocity
+            self.velocity_y += self.gravity  # Apply gravity
+        elif self.popped:
+            self.current_frame += 1
+            if self.current_frame >= 10:  # Animation lasts for 10 frames
+                self.popped = False  # Reset popped state
+        return self.y > 600  # Return True if the item falls out of the screen
 
     def draw(self, screen):
-        screen.blit(self.image, (self.x, self.y))
+        if not self.popped and not self.sliced:
+            # Draw bubble
+            pygame.draw.circle(screen, (173, 216, 230, 128), (self.x + 30, self.y + 30), 35)  # Light blue with transparency
+            pygame.draw.circle(screen, (0, 191, 255), (self.x + 30, self.y + 30), 35, 2)  # Blue outline
+            screen.blit(self.image, (self.x, self.y))  # Draw item inside bubble
+        elif self.sliced:
+            screen.blit(self.image, (self.x, self.y))  # Draw sliced item
+        else:
+            # Create a simple pop animation by scaling down the bubble
+            scale = max(70 - self.current_frame * 7, 0)  # Reduce size each frame
+            if scale > 0:
+                pygame.draw.circle(screen, (173, 216, 230, 128), (self.x + 30, self.y + 30), scale // 2)  # Light blue with transparency
+                pygame.draw.circle(screen, (0, 191, 255), (self.x + 30, self.y + 30), scale // 2, 2)  # Blue outline
+
+    def pop(self):
+        self.popped = True
+        self.current_frame = 0
+
+    def slice(self):
+        self.sliced = True
