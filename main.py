@@ -1,5 +1,6 @@
 import pygame
 import random
+import os
 from bubbles import Bubble
 from utils import increase_difficulty
 
@@ -7,10 +8,23 @@ def draw_text(screen, text, font, color, x, y):
     text_surface = font.render(text, True, color)
     screen.blit(text_surface, (x, y))
 
-def main_menu(screen, font):
+def draw_background(screen, circles):
+    screen.fill((0, 128, 255))  # Fill the background with a solid color
+
+    # Draw some random hollow circles
+    for circle in circles:
+        pygame.draw.circle(screen, (255, 255, 255), (circle['x'], circle['y']), circle['radius'], 2)
+        circle['y'] += circle['speed']  # Move the circle downwards
+        if circle['y'] - circle['radius'] > 600:  # Reset circle position if it moves out of screen
+            circle['y'] = -circle['radius']
+            circle['x'] = random.randint(0, 800)
+            circle['radius'] = random.randint(20, 100)
+            circle['speed'] = random.uniform(0.1, 0.5)  # Slow speed
+
+def main_menu(screen, font, circles):
     menu = True
     while menu:
-        screen.fill((255, 255, 255))
+        draw_background(screen, circles)
         draw_text(screen, "Bubble Recycler", font, (0, 0, 0), 300, 100)
         draw_text(screen, "1. Start Game", font, (0, 0, 0), 300, 200)
         draw_text(screen, "2. Instructions", font, (0, 0, 0), 300, 300)
@@ -30,10 +44,10 @@ def main_menu(screen, font):
                     pygame.quit()
                     exit()
 
-def instructions_menu(screen, font):
+def instructions_menu(screen, font, circles):
     instructions = True
     while instructions:
-        screen.fill((255, 255, 255))
+        draw_background(screen, circles)
         draw_text(screen, "Instructions", font, (0, 0, 0), 300, 100)
         draw_text(screen, "Slice the plastic items to score points.", font, (0, 0, 0), 100, 200)
         draw_text(screen, "Avoid slicing the general waste items (bombs).", font, (0, 0, 0), 100, 250)
@@ -47,13 +61,13 @@ def instructions_menu(screen, font):
             elif event.type == pygame.KEYDOWN:
                 return
 
-def game_loop(screen, font):
+def game_loop(screen, font, high_score, circles):
     clock = pygame.time.Clock()
     bubbles = []
     item_types = ['plastic', 'paper', 'can', 'food_scraps', 'wrappers', 'hazardous_materials']
     score = 0
     level = 1
-    spawn_interval = 20
+    spawn_interval = 40  # Slower spawn rate
 
     pop_sound = pygame.mixer.Sound('Assets/Sounds/pop.mp3')
     slice_sound = pygame.mixer.Sound('Assets/Sounds/slice.wav')
@@ -107,7 +121,7 @@ def game_loop(screen, font):
             spawn_interval = max(1, spawn_interval - 1)
 
         # Draw everything
-        screen.fill((255, 255, 255))
+        draw_background(screen, circles)
         for bubble in bubbles:
             bubble.draw(screen)
 
@@ -118,6 +132,13 @@ def game_loop(screen, font):
         pygame.display.flip()
         clock.tick(60)
 
+    # Display death screen with score and high score
+    screen.fill((255, 255, 255))
+    draw_text(screen, f'Game Over! Your score: {score}', font, (0, 0, 0), 300, 200)
+    draw_text(screen, f'High Score: {high_score}', font, (0, 0, 0), 300, 300)
+    pygame.display.flip()
+    pygame.time.wait(3000)  # Wait for 3 seconds before returning to the main menu
+
     return score
 
 def main():
@@ -126,13 +147,25 @@ def main():
     pygame.display.set_caption("Bubble Recycler")
     font = pygame.font.Font(None, 36)  # Font for the scoreboard
 
+    # Initialize circles for background
+    circles = [{'x': random.randint(0, 800), 'y': random.randint(0, 600), 'radius': random.randint(20, 100), 'speed': random.uniform(0.1, 0.5)} for _ in range(30)]
+
+    # Load high score
+    high_score = 0
+    if os.path.exists("high_score.txt"):
+        with open("high_score.txt", "r") as file:
+            high_score = int(file.read())
+
     while True:
-        choice = main_menu(screen, font)
+        choice = main_menu(screen, font, circles)
         if choice == "start":
-            score = game_loop(screen, font)
-            print(f"Game Over! Your score: {score}")
+            score = game_loop(screen, font, high_score, circles)
+            if score > high_score:
+                high_score = score
+                with open("high_score.txt", "w") as file:
+                    file.write(str(high_score))
         elif choice == "instructions":
-            instructions_menu(screen, font)
+            instructions_menu(screen, font, circles)
 
 if __name__ == "__main__":
     main()
